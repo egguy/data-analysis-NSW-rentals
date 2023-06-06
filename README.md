@@ -17,7 +17,7 @@ pip install -r requirements.txt
 
 ## Content
 
-- [rental_analysis.ipynb](rental_analysis.ipynb) - Jupyter notebook with the analysis
+- [rent_analysis.ipynb](rental_analysis.ipynb) - Jupyter notebook with the analysis
 
 # how tu run ?
 
