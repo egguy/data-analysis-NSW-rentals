@@ -1,6 +1,13 @@
 # data analysis of NSW rentals
 A quick analysis of the rental market in NSW
 
+This shows how to:
+
+- Scrape data with httpx+beautifulsoup
+- Check the data
+- Prepare the data for analysis with pandas
+- Do some basic analysis with pandas
+
 ## Setup
 
 ### Virtual environment (Optional)
