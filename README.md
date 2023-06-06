@@ -7,6 +7,13 @@ This shows how to:
 - Check the data
 - Prepare the data for analysis with pandas
 - Do some basic analysis with pandas
+  - How is distributed the number of bedrooms (e.g. more towards 1 or 2 bedrooms ?)
+  - The bedrooms' rentals per year
+  - How the price is evolving over time
+  - How the price is evolving over time for each number of bedrooms
+  - The percent of change per year and month
+
+You can explore the dataset at this url: [NSW rentals datasette](https://nsw-rentals.moospirit.org/)
 
 ## Setup
 
