@@ -4,3 +4,7 @@ pandas==2.0.2
 openpyxl==3.1.2
 matplotlib==3.7.1
 notebook==6.5.4
+tqdm
+fastparquet
+pydeck
+pre-commit
