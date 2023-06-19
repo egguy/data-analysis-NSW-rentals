@@ -7,7 +7,7 @@ This shows how to:
 - Check the data
 - Prepare the data for analysis with pandas
 - Do some basic analysis with pandas
-  - How is distributed the number of bedrooms (e.g. more towards 1 or 2 bedrooms ?)
+  - How is distributed the number of bedrooms (e.g., more towards 1 or 2 bedrooms ?)
   - The bedrooms' rentals per year
   - How the price is evolving over time
   - How the price is evolving over time for each number of bedrooms
@@ -32,8 +32,11 @@ pip install -r requirements.txt
 ## Content
 
 - [rent_analysis.ipynb](rent_analysis.ipynb) - Jupyter notebook with the analysis
+- [duckdb_analysis.ipynb](duckdb_analysis.ipynb) - An exemple of how to use duckdb to query the dataset and do some analysis (with bonus GEO queries)
+- script/ - Contains the scripts to scrape the data and prepare the dataset
+- Makefile: Allow running the scripts to scrape the data and prepare the dataset
 
-# how tu run ?
+# how tu run?
 
 ```bash
 jupyter notebook
