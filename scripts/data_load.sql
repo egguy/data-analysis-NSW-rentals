@@ -30,8 +30,7 @@ CREATE OR REPLACE TABLE suburbs AS
         SELECT
             suburbname as name,
             postcode,
-            wkb_geometry,
-            ST_GeomFromWKB(wkb_geometry) as geometry
+            geom as geometry
         FROM
             st_read( 'data/shp/suburbs/Suburb.shp')
     UNION ALL
@@ -39,8 +38,7 @@ CREATE OR REPLACE TABLE suburbs AS
         SELECT
             "GCC_NAME21" as name,
             '' as postcode,
-            wkb_geometry,
-            ST_GeomFromWKB(wkb_geometry) as geometry
+            geom as geometry
         FROM
             st_read( 'data/shp/stats-boundaries/GCCSA_2021_AUST_WGS84.shp')
         WHERE
