@@ -1,16 +1,12 @@
-import pandas as pd
 import streamlit as st
-import duckdb
 
 import constants
 from constants import (
-    housing_types,
     reversed_housing_types,
     get_postcodes,
     get_min_max_year,
 )
 import plotly.express as px
-import plotly.graph_objects as go
 
 from db import get_db
 
@@ -115,31 +111,6 @@ with c1:
     )
     st.plotly_chart(figure, use_container_width=True)
 
-    # figure = go.Figure()
-    #
-    # # df_rentals_stats.reset_index(inplace=True)
-    #
-    # print(df_rentals_stats["bedrooms"].unique())
-    # # plot for each bedroom per month
-    # for idx in df_rentals_stats["bedrooms"].unique():
-    #     df_bed = df_rentals_stats[df_rentals_stats['bedrooms'] == idx]
-    #     figure.add_trace(go.Scatter(
-    #         x=df_bed["month"],
-    #         y=df_bed['weekly_rent'], name=f"{idx} bedrooms"))
-    #     figure.add_trace(go.Scatter(
-    #         x=df_bed["month"],
-    #         y=df_bed['max_weekly_rent']+df_bed['min_weekly_rent'][::-1],
-    #         fill='toself',
-    #         hoverinfo="skip",
-    #         showlegend=False
-    #     ))
-
-    # for idx in df_rentals_stats.index.unique():
-    #     figure.add_trace(go.Scatter(x=df_rentals_stats.loc[idx].index, y=df_rentals_stats.loc[idx]['weekly_rent'], name=f"{idx[1]} bedrooms"))
-    # figure.add_trace(go.Scatter(x=df_rentals_stats.index, y=df_rentals_stats['weekly_rent'], name=f" bedrooms"))
-
-    # st.plotly_chart(figure, use_container_width=True)
-    # st.plotly_chart(px.line(df_rentals, title="Average weekly rent per bedroom per year"), use_container_width=True)
 with c2:
     # create a histogram of the weekly rent per bedroom
     historgram = px.histogram(

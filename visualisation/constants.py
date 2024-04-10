@@ -1,7 +1,6 @@
-import duckdb
 import streamlit as st
 
-from db import DuckDBConnection, get_db
+from db import get_db
 
 housing_types = {
     "F": "Flat/unit",

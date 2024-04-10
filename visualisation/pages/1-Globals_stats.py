@@ -145,4 +145,3 @@ fig.update_layout(
     font=dict(size=18),
 )
 st.plotly_chart(fig, use_container_width=True)
-

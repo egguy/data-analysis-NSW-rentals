@@ -1,16 +1,12 @@
-import pandas as pd
 import streamlit as st
-import duckdb
 
 import constants
 from constants import (
-    housing_types,
     reversed_housing_types,
     get_postcodes,
     get_min_max_year,
 )
 import plotly.express as px
-import plotly.graph_objects as go
 
 from db import get_db
 
@@ -187,6 +183,4 @@ with col2:
     )
     st.plotly_chart(rolling_cumsum_trend, use_container_width=True)
 
-# st.plotly_chart(px.bar(df_rentals, title="Average weekly rent per bedroom per year"), use_container_width=True)
-# print(df_rentals.info())
 # display as a line chart
