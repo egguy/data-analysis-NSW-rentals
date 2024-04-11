@@ -1,5 +1,5 @@
+import pandas as pd
 import streamlit as st
-import duckdb
 
 import constants
 from constants import (
@@ -11,13 +11,13 @@ import geopandas as gpd
 
 from streamlit_folium import st_folium
 
+from db import get_db
+
 st.set_page_config(page_title="Rentals stats", layout="wide")
 
-db = duckdb.connect(database="rentals.duckdb", read_only=True)
-db.execute("load 'spatial'")
+db = get_db()
 
 st.markdown(constants.disclaimer)
-
 
 header_col1, header_col2 = st.columns(2)
 
@@ -36,54 +36,22 @@ year_choice = st.slider(
     "Year", min_value=min_year, max_value=max_year, value=(min_year, max_year), step=1
 )
 
-# bar graph of number of rentals per number of bedrooms
-rentals_per_bedroom = (
-    db.sql(
-        """
-SELECT *, CASE WHEN bedrooms > 5 THEN 5 else bedrooms END AS "bedrooms_corrected"
-FROM rentals
-"""
-    )
-    .filter(f"datepart('year', \"lodgement_date\") >= {year_choice[0]}")
-    .filter(f"datepart('year',\"lodgement_date\") <= {year_choice[1]}")
-)
-
-if len(selected_postcodes) > 0:
-    rentals_per_bedroom = rentals_per_bedroom.filter(
-        f'postcode IN ({",".join(selected_postcodes)})'
-    )
-
-if len(selected_dwelling_types) > 0:
-    # prepare for SQL
-    selected_dwelling_types = ",".join([f"'{x}'" for x in selected_dwelling_types])
-    rentals_per_bedroom = rentals_per_bedroom.filter(
-        '"type" IN ({})'.format(selected_dwelling_types)
-    )
-
-# mean_rentals_per_bedroom = db.sql("""
-# SELECT
-#     bedrooms_corrected as bedrooms,
-#     round(AVG("weekly_rent"), 2) AS "Weekly rent"
-#     from rentals_per_bedroom group by 1
-# """).df()
-
 
 @st.cache_data
-def get_postcode_boundaries(selected_postcodes: list[str] = None):
+def get_postcode_boundaries(selected_postcodes: list[str] = None) -> gpd.GeoDataFrame:
     # get the bounds for the map
     geom_postcodes = db.sql(
         """
     SELECT
-        -- ST_AsWKB(ST_FlipCoordinates(geometry)) as geometry,
         ST_AsWKB(geometry) as geometry,
         postcode
     FROM suburbs
     """
     )
     if selected_postcodes:
-        geom_postcodes = geom_postcodes.filter(
-            f'postcode IN ({",".join(selected_postcodes)})'
-        )
+        # add "" around the postcodes
+        selected_post_codes = ",".join([f"'{x}'" for x in selected_postcodes])
+        geom_postcodes = geom_postcodes.filter(f"postcode IN ({selected_post_codes})")
 
     # load the postcode in a geopandas dataframe
     postcodes = gpd.GeoDataFrame.from_records(
@@ -105,35 +73,61 @@ def get_postcode_boundaries(selected_postcodes: list[str] = None):
     return postcodes
 
 
+@st.cache_data
+def rental_per_bedroom(
+    year_choice: list[int],
+    selected_dwelling_types: list[str],
+    selected_postcodes: list[str],
+) -> pd.DataFrame:
+    selected_dwellings = ""
+    if len(selected_dwelling_types) > 0:
+        # prepare for SQL
+        selected_dwellings = ",".join([f"'{x}'" for x in selected_dwelling_types])
+        selected_dwellings = 'AND "type" IN ({})'.format(selected_dwellings)
+
+    # bar graph of number of rentals per number of bedrooms
+    rentals_per_bedroom = db.sql(
+        f"""
+    SELECT
+        postcode as postcode,
+        round(AVG("weekly_rent"), 2) AS "Weekly rent"
+    FROM rentals
+    WHERE 
+        datepart('year', \"lodgement_date\") >= {year_choice[0]}
+        AND datepart('year',\"lodgement_date\") <= {year_choice[1]}
+        {selected_dwellings}
+    group by postcode
+    """
+    )
+
+    if len(selected_postcodes) > 0:
+        rentals_per_bedroom = rentals_per_bedroom.filter(
+            f'postcode IN ({",".join(selected_postcodes)})'
+        )
+
+    df = rentals_per_bedroom.df()
+    print("rental_per_bedroom")
+    print(df.info())
+    # only keep lat, lon and weekly rent
+    # df = df[['lat', 'lon', 'Weekly rent']]
+    # rename Weekly rent to weekly_rent
+    df.rename(columns={"Weekly rent": "weekly_rent"}, inplace=True)
+    return df
+
+
+print("Getting postcodes")
 postcodes = get_postcode_boundaries(selected_postcodes)
 print(postcodes.info())
 
 
-# get average rent per postcode
-rent_per_postcode = db.sql(
-    """
-SELECT
-    postcode as postcode,
-    -- bounding.centroid as centroid,
-    round(AVG("weekly_rent"), 2) AS "Weekly rent"
-FROM rentals_per_bedroom 
-group by postcode
-"""
-).df()
-
+df = rental_per_bedroom(year_choice, selected_dwelling_types, selected_postcodes)
 # join the dataframes on postcode
-df = postcodes.merge(rent_per_postcode, on="postcode", how="left")
+df = postcodes.merge(df, on="postcode", how="left")
 
-
-#
 df["lat"] = df.geometry.centroid.x
 df["lon"] = df.geometry.centroid.y
 
 print(df.info())
-# only keep lat, lon and weekly rent
-# df = df[['lat', 'lon', 'Weekly rent']]
-# rename Weekly rent to weekly_rent
-df.rename(columns={"Weekly rent": "weekly_rent"}, inplace=True)
 
 
 map = df.explore(
