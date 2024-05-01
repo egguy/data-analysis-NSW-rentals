@@ -32,15 +32,8 @@ CREATE OR REPLACE TABLE suburbs AS
             postcode,
             geom as geometry
         FROM
-            st_read( 'data/shp/suburbs/Suburb.shp')
-    UNION ALL
-        -- Add the greater sydney region
-        SELECT
-            "GCC_NAME21" as name,
-            '' as postcode,
-            geom as geometry
-        FROM
-            st_read( 'data/shp/stats-boundaries/GCCSA_2021_AUST_WGS84.shp')
-        WHERE
-            "GCC_NAME21"  IN ('Greater Sydney', 'Rest of NSW')
+            st_read( 'data/shp/suburbs/suburb.geojson')
     );
+
+CREATE unique index geo_post on suburbs(postcode);
+CREATE index rentals_post on rentals(postcode);

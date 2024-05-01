@@ -38,74 +38,58 @@ year_choice = st.slider(
 
 
 @st.cache_data
-def get_postcode_boundaries(selected_postcodes: list[str] = None) -> gpd.GeoDataFrame:
-    # get the bounds for the map
-    geom_postcodes = db.sql(
-        """
-    SELECT
-        ST_AsWKB(geometry) as geometry,
-        postcode
-    FROM suburbs
-    """
-    )
-    if selected_postcodes:
-        # add "" around the postcodes
-        selected_post_codes = ",".join([f"'{x}'" for x in selected_postcodes])
-        geom_postcodes = geom_postcodes.filter(f"postcode IN ({selected_post_codes})")
-
-    # load the postcode in a geopandas dataframe
-    postcodes = gpd.GeoDataFrame.from_records(
-        geom_postcodes.fetchall(), columns=["geometry", "postcode"]
-    )
-    # convert the geometry to a shapely object
-    postcodes["geometry"] = gpd.GeoSeries.from_wkb(postcodes["geometry"], crs="4326")
-    # Set the geometry column
-    postcodes.set_geometry("geometry", inplace=True)
-    print(postcodes.head(10))
-    # postcodes.to_crs(epsg=4326, inplace=True)
-    # group by postcode and union the geometry
-    postcodes = postcodes.dissolve(by="postcode").reset_index()
-
-    postcodes["geometry"] = postcodes["geometry"].apply(
-        lambda x: x.simplify(0.0002, preserve_topology=False)
-    )
-
-    return postcodes
-
-
-@st.cache_data
 def rental_per_bedroom(
     year_choice: list[int],
     selected_dwelling_types: list[str],
     selected_postcodes: list[str],
 ) -> pd.DataFrame:
-    selected_dwellings = ""
+    args = []
     if len(selected_dwelling_types) > 0:
         # prepare for SQL
         selected_dwellings = ",".join([f"'{x}'" for x in selected_dwelling_types])
-        selected_dwellings = 'AND "type" IN ({})'.format(selected_dwellings)
+        args.append('"type" IN ({})'.format(selected_dwellings))
+    if len(selected_postcodes) > 0:
+        args.append(f'rentals.postcode IN ({",".join(selected_postcodes)})')
 
+    if len(args) > 0:
+        args = f'AND {" AND ".join(args)}'
+    else:
+        args = ""
     # bar graph of number of rentals per number of bedrooms
     rentals_per_bedroom = db.sql(
         f"""
     SELECT
-        postcode as postcode,
+        rentals.postcode as postcode,
         round(AVG("weekly_rent"), 2) AS "Weekly rent"
     FROM rentals
     WHERE 
         datepart('year', \"lodgement_date\") >= {year_choice[0]}
         AND datepart('year',\"lodgement_date\") <= {year_choice[1]}
-        {selected_dwellings}
-    group by postcode
+        {args}
+    group by 1
     """
     )
 
-    if len(selected_postcodes) > 0:
-        rentals_per_bedroom = rentals_per_bedroom.filter(
-            f'postcode IN ({",".join(selected_postcodes)})'
-        )
+    geo_data = db.sql("""
+SELECT
+            ST_AsWKB(geometry) as geometry,
+            geo.postcode,
+            "Weekly rent"
+            from suburbs as geo
+            inner join rentals_per_bedroom r on geo.postcode = r.postcode
+            
+    """)
 
-    df = rentals_per_bedroom.df()
+    df = gpd.GeoDataFrame.from_records(
+        geo_data.fetchall(),
+        columns=["geometry", "postcode", "Weekly rent"],
+    )
+    # convert the geometry to a shapely object
+    df["geometry"] = gpd.GeoSeries.from_wkb(df["geometry"], crs="4326")
+    # Set the geometry column
+    df.set_geometry("geometry", inplace=True)
+    df = df.reset_index()
+    # df = rentals_per_bedroom.df()
     print("rental_per_bedroom")
     print(df.info())
     # only keep lat, lon and weekly rent
@@ -116,13 +100,8 @@ def rental_per_bedroom(
 
 
 print("Getting postcodes")
-postcodes = get_postcode_boundaries(selected_postcodes)
-print(postcodes.info())
-
 
 df = rental_per_bedroom(year_choice, selected_dwelling_types, selected_postcodes)
-# join the dataframes on postcode
-df = postcodes.merge(df, on="postcode", how="left")
 
 df["lat"] = df.geometry.centroid.x
 df["lon"] = df.geometry.centroid.y
@@ -137,6 +116,7 @@ map = df.explore(
     k=10,
     legend=True,
 )
+print("callculated map")
 
 make_map_responsive = """
      <style>
@@ -145,4 +125,4 @@ make_map_responsive = """
     """
 st.markdown(make_map_responsive, unsafe_allow_html=True)
 
-st_date = st_folium(map, returned_objects=[], width=1000, height=500)
+st_date = st_folium(map, returned_objects=[], width=1000, height=500, use_container_width=True)
