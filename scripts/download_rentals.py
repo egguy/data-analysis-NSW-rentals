@@ -9,15 +9,16 @@ import httpx
 
 # for HTML parsing
 import bs4
+from urllib.parse import urljoin
 
 # for dataframes
 import pandas as pd
 import multiprocessing
 
-base_url = "https://www.fairtrading.nsw.gov.au/about-fair-trading/rental-bond-data"
+base_url = "https://www.nsw.gov.au/housing-and-construction/rental-forms-surveys-and-data/rental-bond-data"
 
-xlsx_base_dir = "data/xlsx"
-csv_base_dir = "data/csv"
+xlsx_base_dir = "data/input/xlsx"
+csv_base_dir = "data/output/csv"
 
 hrefs = {
     "refunds": [],
@@ -25,13 +26,55 @@ hrefs = {
     "held": [],
 }
 
-tables = {
-    "refunds": "panel2",
-    "lodgements": "panel1",
-    "held": "panel3",
+def is_refund_xlsx(href) -> bool:
+    # url looks like /sites/default/files/noindex/2023-11/RentalBond_Refunds_2nd_Quarter_2023.xlsx
+    lower_href = href.lower()
+    if not lower_href.endswith(".xlsx"):
+        return False
+
+    if "refund" not in lower_href:
+        return False
+    if "rental" not in lower_href:
+        return False
+    if "bond" not in lower_href:
+        return False
+    return True
+
+def is_lodgement_xlsx(href) -> bool:
+    # url looks like /sites/default/files/noindex/2024-06/rental-bond_lodgements_may_2024.xlsx
+    lower_href = href.lower()
+    if not lower_href.endswith(".xlsx"):
+        return False
+
+    if "lodgement" not in lower_href:
+        return False
+    if "rental" not in lower_href:
+        return False
+    if "bond" not in lower_href:
+        return False
+    return True
+
+def is_rental_bond_holding_xlsx(href) -> bool:
+    # url is like: /sites/default/files/noindex/2024-05/RentalBond_Bondsheld_As_At_Jan_2024.xlsx
+    lower_href = href.lower()
+    if not lower_href.endswith(".xlsx"):
+        return False
+
+    if "held" not in lower_href:
+        return False
+    if "rental" not in lower_href:
+        return False
+    if "bond" not in lower_href:
+        return False
+    return True
+
+checker = {
+    "refunds": is_refund_xlsx,
+    "lodgements": is_lodgement_xlsx,
+    "held": is_rental_bond_holding_xlsx,
 }
 
-# create the directories path
+# create the directories' path
 for category in hrefs:
     os.makedirs(os.path.join(xlsx_base_dir, category), exist_ok=True)
     os.makedirs(os.path.join(csv_base_dir, category), exist_ok=True)
@@ -42,29 +85,16 @@ response = httpx.get(base_url)
 # Pass the response to BeautifulSoup
 soup = bs4.BeautifulSoup(response.text, "html.parser")
 
-# 2. Parse the HTML table with id #table76559 this table contains all the links to the XLSX files
-# this seems to be stable enough
-for category, table_id in tables.items():
-    table = soup.find(id=table_id)
+# get all the a link
+links = [link.get("href") for link in soup.find_all("a")]
+# make then absolute
+links = [urljoin(base_url, link) for link in links if link]
 
-    # Get all the `a` tags in the first column of the table
-    # The first column contains the links to the XLSX files
-    # get all the `tr` tags
-    # rows = table.find_all("tr")
-    for link in table.find_all("a"):
-        # # get the first `td` tag from each `tr` tag with xpath
-        # first_column = row.find("td")
-        # if not first_column:
-        #     continue
+print(f"Found {len(links)} links")
 
-        # # get the first `a` tag from each `td` tag
-        # first_link = first_column.find("a")
-        # if not first_link:
-        #     continue
-
-        # get the href attribute from each a tag
-        href = link.get("href")
-        hrefs[category].append(href)
+# categorize the links
+for category, check_func in checker.items():
+    hrefs[category] = [link for link in links if check_func(link)]
 
     print(f"Found {len(hrefs[category])} files to download for {category}")
 
