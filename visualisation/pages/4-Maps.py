@@ -56,19 +56,19 @@ def rental_per_bedroom(
     else:
         args = ""
     # bar graph of number of rentals per number of bedrooms
-    rentals_per_bedroom = db.sql(
-        f"""
-    SELECT
-        rentals.postcode as postcode,
-        round(AVG("weekly_rent"), 2) AS "Weekly rent"
-    FROM rentals
-    WHERE 
-        datepart('year', \"lodgement_date\") >= {year_choice[0]}
-        AND datepart('year',\"lodgement_date\") <= {year_choice[1]}
-        {args}
-    group by 1
-    """
-    )
+    # rentals_per_bedroom = db.sql(
+    #     f"""
+    # SELECT
+    #     rentals.postcode as postcode,
+    #     round(AVG("weekly_rent"), 2) AS "Weekly rent"
+    # FROM rentals
+    # WHERE
+    #     datepart('year', \"lodgement_date\") >= {year_choice[0]}
+    #     AND datepart('year',\"lodgement_date\") <= {year_choice[1]}
+    #     {args}
+    # group by 1
+    # """
+    # )
 
     geo_data = db.sql("""
 SELECT
@@ -77,7 +77,7 @@ SELECT
             "Weekly rent"
             from suburbs as geo
             inner join rentals_per_bedroom r on geo.postcode = r.postcode
-            
+
     """)
 
     df = gpd.GeoDataFrame.from_records(
@@ -125,4 +125,6 @@ make_map_responsive = """
     """
 st.markdown(make_map_responsive, unsafe_allow_html=True)
 
-st_date = st_folium(map, returned_objects=[], width=1000, height=500, use_container_width=True)
+st_date = st_folium(
+    map, returned_objects=[], width=1000, height=500, use_container_width=True
+)

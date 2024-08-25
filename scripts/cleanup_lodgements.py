@@ -4,12 +4,12 @@ import polars as pl
 from tqdm import tqdm
 import pathlib
 
+
 dfs = []
 # process the CSV files
 for filename in tqdm(glob("data/output/csv/lodgements/*.csv")):
     # get the filename without the extension
     filename = filename.split("/")[-1].split(".")[0]
-
 
     # read the file, treat postcodes as string and parse the dates
     df = pl.read_csv(
@@ -30,6 +30,13 @@ print("Processed all the CSV files, concatenating them")
 df = pl.concat(dfs)
 
 df = df.unique()
+
+numeric_columns = [
+    "Bedrooms",
+    "Weekly Rent",
+]
+
+df = df.drop_nulls(subset=numeric_columns)
 print(df.describe())
 
 # print  the raw data

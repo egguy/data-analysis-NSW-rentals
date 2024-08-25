@@ -7,7 +7,6 @@ import pathlib
 dfs = []
 # process the CSV files
 for filename in tqdm(glob("data/output/csv/refunds/*.csv")):
-
     # read the file, treat postcodes as string and parse the dates
     df = pl.read_csv(
         filename,
@@ -36,7 +35,7 @@ numeric_columns = [
 # for col in numeric_columns:
 #     df[col] = pd.to_numeric(df[col], errors="coerce")
 #
-# df = df.dropna(subset=numeric_columns)
+df = df.drop_nulls(subset=numeric_columns)
 # # convert the columns to int
 # for col in numeric_columns:
 #     df[col] = df[col].astype(int)
