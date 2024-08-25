@@ -1,6 +1,6 @@
 from glob import glob
 
-import pandas as pd
+import polars as pl
 from tqdm import tqdm
 import pathlib
 
@@ -9,37 +9,32 @@ dfs = []
 for filename in tqdm(glob("data/output/csv/lodgements/*.csv")):
     # get the filename without the extension
     filename = filename.split("/")[-1].split(".")[0]
-    # If the filename is not month by month, skip it
-    # these files contain the work "-year-"
-    # if "-year-" in filename.lower():
-    #     continue
+
 
     # read the file, treat postcodes as string and parse the dates
-    df = pd.read_csv(
+    df = pl.read_csv(
         f"data/csv/lodgements/{filename}.csv",
-        parse_dates=["Lodgement Date"],
-        dtype={
+        # parse_dates=["Lodgement Date"],
+        try_parse_dates=True,
+        schema_overrides={
             "Postcode": str,
+            # "Bedrooms": pl.Int8,
+            # "Weekly Rent": pl.Int32,
         },
+        null_values=["U"],
     )
     dfs.append(df)
 
 print("Processed all the CSV files, concatenating them")
 
 # concatenate the dataframes
-df = pd.concat(dfs)
-# unique the rows
-df = df.drop_duplicates()
-# convert rent to numeric, dropping the rows that are not numeric
-df["Weekly Rent"] = pd.to_numeric(df["Weekly Rent"], errors="coerce")
-df["Bedrooms"] = pd.to_numeric(df["Bedrooms"], errors="coerce")
-df = df.dropna(subset=["Weekly Rent", "Bedrooms"])
-# convert the columns to int
-df["Weekly Rent"] = df["Weekly Rent"].astype(int)
-df["Bedrooms"] = df["Bedrooms"].astype(int)
+df = pl.concat(dfs)
 
-# Save the raw data
-print(df.info())
+df = df.unique()
+print(df.describe())
+
+# print  the raw data
+print(df.schema)
 
 print("Saving the data")
 print("Converting to CSV")
@@ -49,7 +44,7 @@ pathlib.Path("data/output/csv").mkdir(parents=True, exist_ok=True)
 pathlib.Path("data/output/parquet").mkdir(parents=True, exist_ok=True)
 
 # save to csv
-df.to_csv("data/output/csv/lodgements_combined.csv", index=False)
+df.write_csv("data/output/csv/lodgements_combined.csv")
 print("Done. Converting to parquet")
-df.to_parquet("data/output/parquet/lodgements_combined.parquet", index=False)
+df.write_parquet("data/output/parquet/lodgements_combined.parquet")
 print("Done 🥳 🎉")
