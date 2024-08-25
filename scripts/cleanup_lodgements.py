@@ -14,7 +14,6 @@ for filename in tqdm(glob("data/output/csv/lodgements/*.csv")):
     # read the file, treat postcodes as string and parse the dates
     df = pl.read_csv(
         f"data/csv/lodgements/{filename}.csv",
-        # parse_dates=["Lodgement Date"],
         try_parse_dates=True,
         schema_overrides={
             "Postcode": str,
